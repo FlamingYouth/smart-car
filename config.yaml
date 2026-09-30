@@ -1,0 +1,99 @@
+# Tesla微信通知配置文件
+
+# 企业微信配置
+wechat:
+  webhook_url: ""
+
+database:
+  host: "localhost"
+  port: 5432
+  database: "teslamate"
+  user: "teslamate"
+  password: ""
+
+# MQTT配置
+mqtt:
+  host: "localhost"
+  port: 1883
+  user: null
+  password: ""
+  # 可选：MQTT over SSL
+  # ssl: true
+  # ca_cert: "/path/to/ca.crt"
+
+# 通知配置
+notifications:
+  # 即时推送类
+  charging_started:
+    enabled: true
+    rate_limit_seconds: 300  # 5分钟内不重复发送
+    
+  charging_stopped:
+    enabled: true
+    rate_limit_seconds: 300
+    
+  vehicle_awake:
+    enabled: true
+    rate_limit_seconds: 900  # 15分钟内不重复发送
+    
+  vehicle_asleep:
+    enabled: true
+    rate_limit_seconds: 900
+    
+  door_lock_changed:
+    enabled: true
+    rate_limit_seconds: 300   # 5分钟内不重复发送
+    
+  temperature_alert:
+    enabled: true
+    rate_limit_seconds: 300
+    
+  # 进度推送类（软件更新、行程完成等均为 MQTT 事件驱动）
+    
+  trip_completed:
+    enabled: true
+    rate_limit_seconds: 600
+    
+  update_available:
+    enabled: true
+    rate_limit_seconds: 3600
+    
+  # 统计推送类
+  daily_summary:
+    enabled: true
+    send_hour: 22  # 晚上10点发送
+    
+  weekly_summary:
+    enabled: true
+    send_day: 0    # 周一发送 (0=周一, 6=周日)
+    send_hour: 9   # 上午9点发送
+    
+  monthly_summary:
+    enabled: true
+    send_day: 1    # 每月1号发送
+    send_hour: 9   # 上午9点发送
+
+# 温度告警配置
+temperature_alerts:
+  inside_temp_min: -10.0   # 车内最低温度 (°C)
+  inside_temp_max: 60.0    # 车内最高温度 (°C)
+  outside_temp_min: -30.0  # 车外最低温度 (°C)
+  outside_temp_max: 50.0   # 车外最高温度 (°C)
+
+# 任务调度配置 (仅用于定时统计报告)
+scheduler:
+  timezone: "Asia/Shanghai"
+  grafana_url: "https://grafana.example.com/"
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/tesla_wechat_notifier.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# 健康检查配置
+health_check:
+  enabled: true
+  marker_file: "/tmp/app_healthy"

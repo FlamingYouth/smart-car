@@ -1,0 +1,28 @@
+# Credentials and machine-specific production configuration
+.env
+.env.*
+!.env.example
+config-prod.yaml
+private-backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+
+# Runtime output
+logs/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+.claude/
+
+# Local upstream reference checkout
+source-code/

@@ -1,0 +1,113 @@
+services:
+  teslamate:
+    container_name: teslamate
+    image: teslamate/teslamate:4.0.1
+    restart: always
+    environment:
+      ENCRYPTION_KEY: "${TESLAMATE_ENCRYPTION_KEY}"
+      DATABASE_USER: "${DB_USER}"
+      DATABASE_PASS: "${DB_PASSWORD}"
+      DATABASE_NAME: "${DB_NAME}"
+      DATABASE_HOST: database
+      MQTT_HOST: mosquitto
+      TZ: Asia/Shanghai
+      NOMINATIM_PROXY: "${NOMINATIM_PROXY}"
+    volumes:
+      - ./import:/opt/app/import
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "4000:4000"
+    cap_drop:
+      - ALL
+    networks:
+      - tesla-network
+    depends_on:
+      - database
+      - mosquitto
+
+  database:
+    container_name: teslamate-db
+    image: postgres:18-trixie
+    restart: always
+    environment:
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
+      TZ: Asia/Shanghai
+    volumes:
+      - teslamate-db:/var/lib/postgresql
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - tesla-network
+
+  grafana:
+    container_name: teslamate-grafana
+    image: teslamate/grafana:4.0.1
+    restart: always
+    environment:
+      DATABASE_USER: "${DB_USER}"
+      DATABASE_PASS: "${DB_PASSWORD}"
+      DATABASE_NAME: "${DB_NAME}"
+      DATABASE_HOST: database
+      TZ: Asia/Shanghai
+    ports:
+      - "42005:3000"
+    volumes:
+      - teslamate-grafana-data:/var/lib/grafana
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - tesla-network
+    depends_on:
+      - database
+
+  mosquitto:
+    container_name: teslamate-mosquitto
+    image: eclipse-mosquitto:2
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - mosquitto-conf:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - tesla-network
+
+  tesla-auth:
+    container_name: tesla-oauth-web
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/tesla-oauth-web:1.0
+    restart: always
+    ports:
+      - "42004:5007"
+    volumes:
+      - tesla-logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - tesla-network
+
+  tesla-notifier:
+    container_name: tesla-wechat-notifier
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
+    restart: always
+    volumes:
+      - ./config-prod.yaml:/app/config.yaml:ro
+      - tesla-notifier-logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - tesla-network
+    depends_on:
+      - database
+      - mosquitto
+
+volumes:
+  teslamate-db:
+  teslamate-grafana-data:
+  mosquitto-conf:
+  mosquitto-data:
+  tesla-logs:
+  tesla-notifier-logs:
+
+networks:
+  tesla-network:
+    driver: bridge

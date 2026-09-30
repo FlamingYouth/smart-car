@@ -1,0 +1,140 @@
+name: Verify and mirror tested container 4.0
+
+# Only an explicit manual run publishes; normal pushes do not publish images.
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-smart-car-container-4.0
+  cancel-in-progress: false
+
+env:
+  SOURCE_IMAGE: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier
+  SOURCE_DIGEST: sha256:e9163bbfc54fd6cac73c4d035fff6306c06cef9172d9c79d6540ca9ebf9daf46
+  DESTINATION_IMAGE: ghcr.io/flamingyouth/smart-car-tesla-notifier
+  VERSION: "4.0"
+
+jobs:
+  verify:
+    name: Verify immutable ${{ matrix.architecture }} image
+    if: github.repository == 'FlamingYouth/smart-car' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            image_id: sha256:fc9f4af3f88252dd18dd0f390f20537ab16bd25b109f6eed19a1b1a8486a6450
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            image_id: sha256:da408f62377a152c5baad5b52c26cc3c4dd058aaa31e7b3dc522a8101c2f7e58
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout sanitized release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Pull the exact previously tested production image
+        env:
+          ARCH: ${{ matrix.architecture }}
+          EXPECTED_ID: ${{ matrix.image_id }}
+        run: |
+          docker pull --platform "linux/$ARCH" "$SOURCE_IMAGE@$SOURCE_DIGEST"
+          docker tag "$SOURCE_IMAGE@$SOURCE_DIGEST" "candidate:$ARCH"
+          test "$(docker image inspect "candidate:$ARCH" --format '{{.Id}}')" = "$EXPECTED_ID"
+          test "$(docker image inspect "candidate:$ARCH" --format '{{.Architecture}}')" = "$ARCH"
+          docker run --rm --network none --read-only \
+            --mount "type=bind,src=$PWD/release/verified-app.sha256,dst=/tmp/verified-app.sha256,readonly" \
+            "candidate:$ARCH" sha256sum -c /tmp/verified-app.sha256
+          docker run --rm --network none --read-only "candidate:$ARCH" python -m pip check
+      - name: Build only the offline test layer
+        env:
+          ARCH: ${{ matrix.architecture }}
+        run: |
+          docker build --platform "linux/$ARCH" --build-arg "BASE_IMAGE=candidate:$ARCH" \
+            -f tests/Dockerfile -t "offline-test:$ARCH" .
+      - name: Run all offline regression and real HTTP loopback tests
+        env:
+          ARCH: ${{ matrix.architecture }}
+        run: |
+          for image_script in "offline-test:$ARCH tests/run_offline.py" "candidate:$ARCH tests/docker_transport_smoke.py"; do
+            read -r image script <<< "$image_script"
+            docker run --rm --network none --read-only --cap-drop ALL \
+              --security-opt no-new-privileges:true --memory 512m \
+              --tmpfs /tmp:rw,nosuid,size=64m \
+              -e PYTHONDONTWRITEBYTECODE=1 -e PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+              --mount "type=bind,src=$PWD/tests,dst=/app/tests,readonly" \
+              "$image" python "$script"
+          done
+
+  publish:
+    name: Mirror verified multi-architecture image without rebuilding
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Install official distribution image-copy tool
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends skopeo
+      - name: Authenticate using repository-scoped temporary authorization
+        env:
+          PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$PACKAGE_TOKEN" | skopeo login \
+            --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+      - name: Refuse to overwrite unrelated or different releases
+        env:
+          PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          status=$(curl --silent --show-error -o existing-package.json -w '%{http_code}' \
+            -H "Authorization: Bearer $PACKAGE_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/users/FlamingYouth/packages/container/smart-car-tesla-notifier")
+          if [ "$status" = 200 ]; then
+            jq -e '.repository.full_name == "FlamingYouth/smart-car"' existing-package.json
+            if skopeo inspect --raw "docker://$DESTINATION_IMAGE:$VERSION" > existing-manifest.json 2> registry-check.log; then
+              test "$(sha256sum existing-manifest.json | cut -d ' ' -f 1)" = "${SOURCE_DIGEST#sha256:}"
+            elif ! grep -Eq 'manifest unknown|name unknown|status code: 404|StatusCode: 404' registry-check.log; then
+              echo "Existing tag could not be checked safely; refusing publication."
+              exit 1
+            fi
+          elif [ "$status" != 404 ]; then
+            echo "Package authorization check failed: HTTP $status"
+            exit 1
+          fi
+          # A new repository token cannot overwrite an unrelated hidden package;
+          # registry authorization also enforces that restriction during the copy.
+      - name: Mirror all platforms and preserve every digest
+        run: |
+          skopeo copy --all --preserve-digests --retry-times 3 \
+            "docker://$SOURCE_IMAGE@$SOURCE_DIGEST" \
+            "docker://$DESTINATION_IMAGE:$VERSION"
+      - name: Verify exact publication and repository association
+        env:
+          PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          skopeo inspect --raw "docker://$DESTINATION_IMAGE:$VERSION" > published-manifest.json
+          test "$(sha256sum published-manifest.json | cut -d ' ' -f 1)" = "${SOURCE_DIGEST#sha256:}"
+          jq -e '[.manifests[].platform.architecture] | sort == ["amd64","arm64"]' published-manifest.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $PACKAGE_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/users/FlamingYouth/packages/container/smart-car-tesla-notifier" \
+            | jq -e '.repository.full_name == "FlamingYouth/smart-car"'
+          {
+            echo '## Verified 4.0 published'
+            echo "Image: $DESTINATION_IMAGE:$VERSION"
+            echo "Digest: $SOURCE_DIGEST"
+            echo 'AMD64 and ARM64 passed the full offline regression and HTTP checks.'
+            echo 'Original tested manifests, configs and layers copied without rebuilding.'
+            echo 'Package is associated with FlamingYouth/smart-car.'
+            echo 'New GHCR packages default to private; set public visibility for anonymous pulls.'
+          } >> "$GITHUB_STEP_SUMMARY"

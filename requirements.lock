@@ -1,0 +1,11 @@
+# Docker 3.1.0 使用的完整依赖集合，避免重建时漂移。
+APScheduler==3.11.3
+certifi==2026.7.22
+charset-normalizer==3.4.9
+idna==3.18
+paho-mqtt==2.1.0
+psycopg2-binary==2.9.12
+PyYAML==6.0.3
+requests==2.32.5
+tzlocal==5.3.1
+urllib3==2.6.3

@@ -1,0 +1,9 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203,E501,W291,W293
+exclude =
+    .git,
+    .venv,
+    venv,
+    __pycache__,
+    source-code

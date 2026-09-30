@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  tesla-notifier:
+    build: .
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
+    container_name: tesla-wechat-notifier
+    volumes:
+      - ./config-prod.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    environment:
+      # 企业微信配置 - 从环境变量读取（更安全）
+      - WECHAT_WEBHOOK_URL=${WECHAT_WEBHOOK_URL:-}
+      
+      # 数据库配置
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-teslamate}
+      - DB_USER=${DB_USER:-teslamate}
+      - DB_PASSWORD=${DB_PASSWORD}
+      
+      # MQTT配置
+      - MQTT_HOST=${MQTT_HOST}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/app/logs/tesla_wechat_notifier.log
+      - APP_TIMEZONE=${APP_TIMEZONE:-Asia/Shanghai}
+      
+    restart: unless-stopped
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, pathlib; p=pathlib.Path('/tmp/app_healthy'); pid=int(p.read_text().splitlines()[0]); os.kill(pid, 0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # 依赖服务（如果在同一个docker-compose中）
+    # depends_on:
+    #   - postgres
+    #   - mosquitto
+    
+    networks:
+      - tesla-network
+
+networks:
+  tesla-network:
+    driver: bridge
+
+# 可选：如果你想在同一个compose文件中包含依赖服务
+# services:
+#   postgres:
+#     image: postgres:13
+#     environment:
+#       POSTGRES_DB: teslamate
+#       POSTGRES_USER: teslamate
+#       POSTGRES_PASSWORD: ${DB_PASSWORD}
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - tesla-network
+#
+#   mosquitto:
+#     image: eclipse-mosquitto:2
+#     ports:
+#       - "1883:1883"
+#     volumes:
+#       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+#     networks:
+#       - tesla-network
+#
+# volumes:
+#   postgres_data:

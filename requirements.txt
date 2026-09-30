@@ -1,0 +1,8 @@
+# Tesla微信通知系统依赖包
+
+# 核心依赖
+paho-mqtt>=1.6.0         # MQTT客户端
+psycopg2-binary>=2.9.0   # PostgreSQL数据库连接
+requests>=2.28.0         # HTTP请求库
+PyYAML>=6.0              # YAML配置文件解析
+APScheduler>=3.9.0       # 任务调度器
