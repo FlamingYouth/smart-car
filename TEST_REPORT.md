@@ -1,7 +1,7 @@
 # Webhook 迁移验收记录
 
 首次验收日期：2026-10-01（Asia/Shanghai）。首次验收时未提交或上传；
-后续镜像 `4.0` 发布与双架构复测另行记录。
+后续镜像 `4.0` 发布、双架构复测和 GitHub Packages 验收另行记录。
 
 ## 用户复测镜像
 
@@ -106,3 +106,39 @@ registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
 根目录与 server-deploy 的 Compose 仅更新通知镜像标签；
 没有升级其他组件，也没有另改应用版本号。
 README 已按作者说明补充“约一年前编写、原功能稳定测试后整理公开”的背景。
+
+## GitHub 源码与 Packages 发布验收
+
+发布时间：2026-10-01（Asia/Shanghai）。
+
+- 公开源码仓库：[FlamingYouth/smart-car](https://github.com/FlamingYouth/smart-car)。
+- 首个干净源码提交：`1a01a16f6f22264c4a0b38ef62f16a8478471d0d`。
+- 公开镜像包：[smart-car-tesla-notifier](https://github.com/FlamingYouth/smart-car/pkgs/container/smart-car-tesla-notifier)。
+- 发布流程：[Verify and mirror tested container 4.0](https://github.com/FlamingYouth/smart-car/actions/runs/36748417878)，全部任务成功。
+
+GitHub 仅提交当前审查过的 33 个公开文件，使用独立的新 Git 历史，
+没有复制原 Gitee 历史、生产配置、环境文件、日志或本地备份。
+提交前再次检查暂存内容与当前公开源码逐字一致，并检查已知新旧凭据未被包含。
+原项目的 Gitee 远程和本地历史保留不动。
+
+GitHub 原生 AMD64、ARM64 执行环境分别拉取已发布的不可变镜像摘要，
+核对镜像 ID、9 个应用文件摘要和运行依赖，两种架构各通过 74 项离线回归，
+以及 16 条模板、HTTP 拒绝/重定向、CLI 成功/失败与无代理直连冒烟。
+测试没有使用真实机器人密钥，没有接入生产车辆服务。
+
+测试通过后原样同步到：
+
+```text
+ghcr.io/flamingyouth/smart-car-tesla-notifier:4.0
+```
+
+同步使用 `--all --preserve-digests`，没有重新构建生产镜像。
+GitHub 与阿里云的统一清单摘要均为本页记录的 `sha256:e9163bbf...`；
+两种平台的清单、镜像配置和层内容保持一致。
+发布流程校验镜像包关联 `FlamingYouth/smart-car`，页面显示 `Public` 与两种架构。
+
+使用不含登录凭据的临时 Docker 配置完成匿名清单查询，
+并分别反向拉取 GitHub 的 AMD64、ARM64 镜像，
+清单摘要和镜像 ID 与本页已测试的两个平台逐一相同。
+确认无需 GitHub 登录即可拉取；没有修改 Docker 全局登录信息或启动正式服务。
+本节与 README 的后续验收补充只是文档变更，不改变已测试、已发布的镜像内容。
