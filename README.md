@@ -144,8 +144,9 @@ GitHub Packages 备用镜像地址：
 docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:4.1
 ```
 
-GitHub Packages 已公开并关联本仓库。每个版本均需验证 AMD64、ARM64 的反向拉取，
-以及 GitHub 与阿里云的镜像清单摘要一致；`4.1` 的具体结果见 [测试报告](TEST_REPORT.md)。
+`4.1` 已在阿里云和公开 GitHub Packages 发布，并关联本仓库。
+AMD64、ARM64 的匿名反向拉取均已验证；两边镜像清单摘要完全相同。
+本地 Docker 与 GitHub 原生双架构各通过 79 项回归，具体范围见 [测试报告](TEST_REPORT.md)。
 
 Packages 发布流程从已测试的阿里云镜像摘要同步，不重新构建生产镜像。
 两个平台在 GitHub 上再次进行源码摘要、依赖检查、离线回归和 HTTP 测试；

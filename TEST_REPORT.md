@@ -216,7 +216,37 @@ registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
 - 两个平台镜像 ID 即本节记录的最终候选镜像 ID，没有发布测试依赖层。
 - 新版非 root 容器断网只读加载服务器私有配置成功，不启动正式服务。
 
+使用不含登录信息的临时 Docker 配置，从阿里云统一 `4.1` 标签分别匿名拉取
+AMD64、ARM64，返回的统一清单摘要与镜像 ID 均与本节记录完全一致。
+ARM64 首次反向拉取遇到临时网络 EOF，重试只读拉取后成功；没有重发机器人消息。
+服务器私有配置与备份逐项、逐字比较，除已授权的通知配置迁移外，
+数据库、MQTT、通知时间、阈值、日志和健康检查配置保持不变。
+
 GitHub Packages 使用仓库临时授权，从该不可变摘要原样同步全部架构。
 发布流程会在原生 AMD64、ARM64 执行环境再次核对镜像 ID、应用文件与全部测试，
 并拒绝覆盖与新摘要不同的同名版本；同步后检查包关联和公开状态。
 该流程不重新构建生产镜像，不需要上传 Docker 登录信息或个人 Token。
+
+### 4.1 GitHub Packages 发布与最终反向验证
+
+- 源码发布提交：`36cc4511f4d801bc176abc078c6b9db84f217a93`，基于独立干净历史。
+- [4.1 发布流程](https://github.com/FlamingYouth/smart-car/actions/runs/36764659774) 全部成功。
+- 原生 GitHub ARM64、AMD64 环境各通过 79 项离线回归与真实 HTTP 回环冒烟。
+- 生产镜像未重新构建，使用 `--all --preserve-digests` 原样同步到公开镜像包，
+  流程确认包关联 `FlamingYouth/smart-car`，可见性为 `public`。
+
+```text
+ghcr.io/flamingyouth/smart-car-tesla-notifier:4.1
+```
+
+GitHub 与阿里云的统一清单摘要均为：
+`sha256:03b2661a23de6aaa02447a1748202354cb51f5fafd6939f8db60c07156ad1c93`。
+两种平台清单、镜像配置和所有层摘要均保留。
+使用无登录信息的临时 Docker 配置分别匿名拉取 GitHub 的两个平台，
+摘要和镜像 ID 与本页记录的最终镜像逐一一致；本地统一标签最后保持 ARM64。
+旧阿里云 `4.0` 的平台清单再次只读查询，仍为初始发布的 `1ec9f...` 与 `cc8de9...`，
+未覆盖、删除或改动旧版本、数据卷以及其他项目。
+
+README、CHANGELOG、两份 Compose 和发布验证摘要均已更新。
+服务器部署的私有配置可沿用，不会随源码提交或镜像发布上传。
+后续最终验收文档补充只改文档，不改变已测试和发布的生产镜像。
