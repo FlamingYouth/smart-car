@@ -258,7 +258,7 @@ class WeChatClient:
         url: Optional[str] = None,
         dedup_key: Optional[str] = None,
     ) -> bool:
-        """机器人不支持应用 textcard，保留原文并以 Markdown 附上详情链接。"""
+        """兼容旧卡片接口：报告以普通文本发送，保留标题、正文和详情网址。"""
         content = f"{title}\n{description}"
         if url:
             try:
@@ -274,9 +274,8 @@ class WeChatClient:
             except (ValueError, TypeError):
                 logger.error("报告详情链接无效，未发送")
                 return False
-            safe_url = url.replace("(", "%28").replace(")", "%29")
-            content += f"\n\n[查看详情]({safe_url})"
-        return self._send(message_type, content, "markdown", dedup_key)
+            content += f"\n\n查看详情：{url}"
+        return self._send(message_type, content, "text", dedup_key)
 
     def get_message_stats(self) -> Dict[str, Any]:
         with self._message_lock:

@@ -75,7 +75,7 @@ services:
       - tesla-network
 
   tesla-auth:
-    container_name: tesla-oauth-web
+    container_name: teslamate-oauth-web
     image: registry.cn-hangzhou.aliyuncs.com/bigbey/tesla-oauth-web:1.0
     restart: always
     ports:
@@ -87,8 +87,8 @@ services:
       - tesla-network
 
   tesla-notifier:
-    container_name: tesla-wechat-notifier
-    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
+    container_name: teslamate-wechat-notifier
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
     restart: always
     volumes:
       - ./config-prod.yaml:/app/config.yaml:ro

@@ -57,11 +57,10 @@ def test_samples_pass_through_real_adapter_with_original_content():
                 sample["title"]
                 + "\n"
                 + sample["description"]
-                + "\n\n[查看详情]("
+                + "\n\n查看详情："
                 + sample["url"]
-                + ")"
             )
-            kind = "markdown"
+            kind = "text"
         else:
             assert client.send_message(sample["message_type"], sample["content"])
             expected, kind = sample["content"], "text"
@@ -69,4 +68,7 @@ def test_samples_pass_through_real_adapter_with_original_content():
             "msgtype": kind,
             kind: {"content": expected},
         }
+        if sample["kind"] == "card":
+            assert "[查看详情](" not in expected
+            assert "查看详情：" + sample["url"] in expected
     assert client.session.post.call_count == 16

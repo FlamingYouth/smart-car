@@ -77,7 +77,18 @@ try:
         else:
             assert client.send_message(sample["message_type"], sample["content"])
     assert len(requests_received) == 16
-    assert sum(item["msgtype"] == "markdown" for item in requests_received) == 3
+    assert all(item["msgtype"] == "text" for item in requests_received)
+    for sample, payload in zip(samples, requests_received):
+        if sample["kind"] == "card":
+            content = payload["text"]["content"]
+            assert content == (
+                sample["title"]
+                + "\n"
+                + sample["description"]
+                + "\n\n查看详情："
+                + sample["url"]
+            )
+            assert "[查看详情](" not in content
     assert not get_requests
 
     # 容器内真实 HTTP 失败处理：403、重定向、API 拒绝，均不自动重试。

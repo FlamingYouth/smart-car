@@ -31,8 +31,10 @@ Skipped disabled/cooldown/duplicate calls retain legacy True semantics; not actu
 Each client allows 18 attempted robot requests per rolling minute, including failures and chunks.
 This quota is per process, not distributed. No automatic queuing/backfill.
 
-Report transport adapts textcard to robot Markdown with the original title, body and detail link.
-Visual card chrome changes; do not promise an identical application-card appearance.
+Version 4.1 adapts the legacy textcard interface to ordinary robot text, like all other notifications.
+Preserve the original title and body, append the validated detail URL as "查看详情：URL".
+Never use Markdown link syntax or Markdown payloads for these reports. Use the 2048-byte text limit.
+Do not promise an identical application-card appearance or a client display not actually observed.
 
 ## Verification
 
@@ -52,7 +54,7 @@ Dockerfile copies only Python runtime files, sanitized config.yaml, scripts and 
 The base image digest and complete runtime dependencies are fixed to the tested versions.
 Runtime user is UID 1000. Read-only production config mounts must be readable by that user.
 The original local test alias is codex-smart-car-webhook:3.1.0.
-Root Compose and server-deploy/docker-compose.yml use the Aliyun notifier image tag 4.0.
+Root Compose and server-deploy/docker-compose.yml use the Aliyun notifier image tag 4.1.
 Only the notifier image tag changes; do not upgrade unrelated TeslaMate services.
 NOMINATIM_PROXY there belongs to TeslaMate geocoding and is not the notification proxy.
 

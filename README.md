@@ -5,8 +5,11 @@
 应用 Token、个人收件人设置或通知代理。
 
 现有通知模板的文字、emoji、换行、标题和统计内容保持不变。
-日报、周报、月报改用群机器人 Markdown：原标题、原正文和“查看详情”链接都保留，
-但显示样式不能与原自建应用的 textcard 完全相同。
+`4.1` 的日报、周报、月报与其他通知一样，统一使用群机器人普通文本 `text`，
+不再使用 Markdown 或应用卡片。原标题、正文、emoji、换行和统计数字保留；
+恢复详情网址，末尾为 `查看详情：https://…`，不使用 `[文字](网址)` 标记。
+网址来自 `scheduler.grafana_url`，程序只把它放进通知，不访问 Grafana。
+具体变更见 [版本记录](CHANGELOG.md)，真实微信显示仍以客户端实际结果为准。
 
 ## 项目公开说明
 
@@ -14,7 +17,7 @@
 确认原有功能稳定后，才在一年后整理公开。
 本次将通知方式调整为企业微信群机器人 Webhook，保留原有通知模板，
 并另行完成 Docker 回归和模拟消息发送测试。
-镜像发布标签为 `4.0`；这不是 TeslaMate 等其他组件的升级版本号。
+当前通知镜像发布标签为 `4.1`；这不是 TeslaMate 等其他组件的升级版本号。
 具体测试范围见 [测试报告](TEST_REPORT.md)。
 
 GitHub 源码：[FlamingYouth/smart-car](https://github.com/FlamingYouth/smart-car)。
@@ -98,27 +101,27 @@ Linux 上只读挂载的生产配置仍需要容器内 UID 1000 可读取；例�
 ```bash
 cd /path/to/smart-car
 docker run --rm --env-file .env.webhook-test \
-  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0 python main.py --test-wechat
+  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1 python main.py --test-wechat
 ```
 
 一次发送全部现有模板的模拟样例：
 
 ```bash
 docker run --rm --env-file .env.webhook-test \
-  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0 python scripts/send_notification_samples.py --send
+  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1 python scripts/send_notification_samples.py --send
 ```
 
 会先发一条说明，再发 16 条样例，覆盖 9 类实际通知。
 所有车辆、地址、温度、行程、充电数据均为模拟数据。
 生产模板不添加测试前缀，样例里的车辆名和测试说明明确标注模拟数据。
 测试工具只在当前进程关闭样例的按类型冷却和去重，不修改生产设置。
-默认详情链接为示例地址；要检查自己的 Grafana 链接，可额外只读挂载本地配置：
+默认详情网址是示例地址；要使用自己配置的 Grafana 网址，可额外只读挂载本地配置：
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" \
   --env-file .env.webhook-test \
   -v "$PWD/config-prod.yaml:/app/config.yaml:ro" \
-  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0 python scripts/send_notification_samples.py --send
+  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1 python scripts/send_notification_samples.py --send
 ```
 
 默认不加 `--send` 只预览，不访问网络。
@@ -129,49 +132,53 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 先完成上述试发，确认后再接入自己的数据库和 MQTT：
 
-`4.0` 的发布地址：
+`4.1` 的发布地址：
 
 ```text
-registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
+registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
 ```
 
 GitHub Packages 备用镜像地址：
 
 ```bash
-docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:4.0
+docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:4.1
 ```
 
-当前 `4.0` 已公开并关联本仓库，AMD64、ARM64 均已完成匿名反向拉取验证。
-GitHub 与阿里云的镜像清单摘要完全相同，详细记录见 [测试报告](TEST_REPORT.md)。
+GitHub Packages 已公开并关联本仓库。每个版本均需验证 AMD64、ARM64 的反向拉取，
+以及 GitHub 与阿里云的镜像清单摘要一致；`4.1` 的具体结果见 [测试报告](TEST_REPORT.md)。
 
 Packages 发布流程从已测试的阿里云镜像摘要同步，不重新构建生产镜像。
 两个平台在 GitHub 上再次进行源码摘要、依赖检查、离线回归和 HTTP 测试；
 全部通过后才同步所有架构，并校验两个仓库的镜像清单摘要完全相同。
 发布使用仓库级临时授权，不需要把 Docker 密码或个人 Token 写进源码。
-需要自行发布时，在 GitHub Actions 中手动运行 `Verify and mirror tested container 4.0`；
+需要自行发布时，在 GitHub Actions 中手动运行 `Verify and mirror tested container 4.1`；
 普通源码提交不会自动发布镜像。新 Packages 默认私有，发布后需在包设置中改为公开，
 并确认源码仓库关联；首次发布的具体结果见 TEST_REPORT.md。
 
 同一标签支持 `linux/amd64` 和 `linux/arm64`，拉取时自动选择架构；
 两种镜像使用相同应用源码、锁定的运行依赖版本，并分别完成容器回归测试。
-本机原测试别名 `codex-smart-car-webhook:3.1.0` 仍保留，它与 `4.0`
-的 ARM64 版本是同一个镜像内容，别名不同不代表功能不同。
+旧 `4.0` 保留供回退，不覆盖旧标签。
+本机 `codex-smart-car-webhook:3.1.0` 是旧 `4.0` 的 ARM64 别名，
+不包含 `4.1` 的普通文本总结修订；测试新版请使用 `4.1`。
 
 服务器直接拉取镜像，无需重新构建。确保私有配置已设置，文件可被容器 UID 1000 读取：
 
 ```bash
 docker compose pull tesla-notifier
-docker compose up -d --no-build tesla-notifier
+docker compose up -d --no-deps --no-build tesla-notifier
 docker compose logs -f tesla-notifier
 ```
 
 较旧环境使用 `docker-compose` 代替 `docker compose`。
-仓库根目录的 Compose 使用上述阿里云 `4.0` 镜像，只读挂载私有配置，
+仓库根目录的 Compose 使用上述阿里云 `4.1` 镜像，只读挂载私有配置，
 并检查核心服务启动后的健康标记。需要自己从源码构建时，另执行 `docker compose build`。
 不要在测试阶段运行正式 Compose 启动命令：它会接入已配置的真实服务。
 
-`server-deploy/docker-compose.yml` 是原完整 TeslaMate 部署示例，
-其中仅通知服务的镜像标签更新为 `4.0`，其余服务不变。
+`server-deploy/docker-compose.yml` 是作者提供的完整 TeslaMate 部署配置，
+通知服务使用 `4.1`，其余服务、端口、卷与网络保持作者提供的配置。
+服务器专用私有 `server-deploy/config-prod.yaml` 与该 Compose 放在同一目录，
+数据库地址为 `database:5432`、MQTT 为 `mosquitto:1883`；不要混用根目录的本机连接配置。
+完整 Webhook 与数据库密码只能保存在自己的私有文件中，不能提交公开仓库。
 TeslaMate 的 `NOMINATIM_PROXY` 是地址查询相关配置，
 不属于已移除的微信通知代理，本次保持不动。
 
@@ -212,7 +219,7 @@ temperature_alerts:
 网络/API 错误不自动重试，避免超时后重复通知；
 后续不同事件仍可尝试发送。若手工重试一次部分成功的超长消息，
 已收到的前半部分可能重复。
-文本按 UTF-8 字节最多 2048、Markdown 最多 4096 分段，字符不会被截断。
+当前所有实际通知使用普通文本，按 UTF-8 字节最多 2048 分段，字符不会被截断。
 这些限制见[官方连接器说明](https://support.huaweicloud.com/usermanual-codeartslink/codeartslink_03_0053.html)；
 机器人服务端频率限制见[腾讯云官方说明](https://cloud.tencent.com/document/product/248/50413)。
 
@@ -235,15 +242,17 @@ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python tests/run_offl
 在相同生产镜像基础上做 Docker 回归：
 
 ```bash
-docker build -t codex-smart-car-webhook:3.1.0 .
-docker build -f tests/Dockerfile -t codex-smart-car-webhook-test:3.1.0 .
+docker build -t codex-smart-car-runtime:4.1 .
+docker build --build-arg BASE_IMAGE=codex-smart-car-runtime:4.1 \
+  -f tests/Dockerfile -t codex-smart-car-tests:4.1 .
 docker run --rm --network none \
   -e PYTHONDONTWRITEBYTECODE=1 -e PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
   -v "$PWD/tests:/app/tests:ro" \
-  codex-smart-car-webhook-test:3.1.0 python tests/run_offline.py
+  codex-smart-car-tests:4.1 python tests/run_offline.py
 ```
 
 测试覆盖：发送协议、密钥隐藏、空环境变量、代理移除、非法 Webhook、
 HTTP/API/JSON/网络失败、去重、按车限流、并发、全局频率、超长 Unicode、
-三种报告链接，以及原来的 MQTT/统计/时区/健康检查回归。
+三种普通文本报告、恢复的详情网址、2048 字节报告分段，
+以及原来的 MQTT/统计/时区/健康检查回归。
 单元测试用模拟服务，不代表真实 TeslaMate 或真实车辆联调已完成。

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   tesla-notifier:
     build: .
-    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.0
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
     container_name: tesla-wechat-notifier
     volumes:
       - ./config-prod.yaml:/app/config.yaml:ro

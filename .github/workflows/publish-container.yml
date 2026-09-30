@@ -1,4 +1,4 @@
-name: Verify and mirror tested container 4.0
+name: Verify and mirror tested container 4.1
 
 # Only an explicit manual run publishes; normal pushes do not publish images.
 "on":
@@ -8,14 +8,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-smart-car-container-4.0
+  group: publish-smart-car-container-4.1
   cancel-in-progress: false
 
 env:
   SOURCE_IMAGE: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier
-  SOURCE_DIGEST: sha256:e9163bbfc54fd6cac73c4d035fff6306c06cef9172d9c79d6540ca9ebf9daf46
+  SOURCE_DIGEST: sha256:03b2661a23de6aaa02447a1748202354cb51f5fafd6939f8db60c07156ad1c93
   DESTINATION_IMAGE: ghcr.io/flamingyouth/smart-car-tesla-notifier
-  VERSION: "4.0"
+  VERSION: "4.1"
 
 jobs:
   verify:
@@ -27,10 +27,10 @@ jobs:
         include:
           - architecture: amd64
             runner: ubuntu-24.04
-            image_id: sha256:fc9f4af3f88252dd18dd0f390f20537ab16bd25b109f6eed19a1b1a8486a6450
+            image_id: sha256:4e0973723b5cc83f665cc79a9205f822a00b956aa87029714afc9428a83a1605
           - architecture: arm64
             runner: ubuntu-24.04-arm
-            image_id: sha256:da408f62377a152c5baad5b52c26cc3c4dd058aaa31e7b3dc522a8101c2f7e58
+            image_id: sha256:b5edfdba2cdb89bed585677862f4ad3efdb19f8a30453dd2b2088b586727edd0
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
@@ -128,13 +128,12 @@ jobs:
             -H "Authorization: Bearer $PACKAGE_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/users/FlamingYouth/packages/container/smart-car-tesla-notifier" \
-            | jq -e '.repository.full_name == "FlamingYouth/smart-car"'
+            | jq -e '.repository.full_name == "FlamingYouth/smart-car" and .visibility == "public"'
           {
-            echo '## Verified 4.0 published'
+            echo '## Verified 4.1 published'
             echo "Image: $DESTINATION_IMAGE:$VERSION"
             echo "Digest: $SOURCE_DIGEST"
             echo 'AMD64 and ARM64 passed the full offline regression and HTTP checks.'
             echo 'Original tested manifests, configs and layers copied without rebuilding.'
-            echo 'Package is associated with FlamingYouth/smart-car.'
-            echo 'New GHCR packages default to private; set public visibility for anonymous pulls.'
+            echo 'Package is public and associated with FlamingYouth/smart-car.'
           } >> "$GITHUB_STEP_SUMMARY"

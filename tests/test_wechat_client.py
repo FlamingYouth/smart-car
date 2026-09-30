@@ -202,45 +202,71 @@ def test_early_newline_followed_by_full_tail_does_not_overflow(limit):
     assert all(len(chunk.encode("utf-8")) <= limit for chunk in chunks)
 
 
-def test_markdown_preserves_card_title_body_and_link():
+@pytest.mark.parametrize(
+    "message_type", ["daily_summary", "weekly_summary", "monthly_summary"]
+)
+def test_summary_uses_plain_text_preserving_title_body_and_detail_url(message_type):
     client = make_client()
     title, body = "📊 车辆 昨日总结", "📅 日期\n\n🛣️ 行驶次数: 2次\n原文"
     assert client.send_card_message(
-        "daily_summary", title, body, url="https://grafana.example.com/", dedup_key="1"
+        message_type, title, body, url="https://grafana.example.com/", dedup_key="1"
     )
     assert client.session.post.call_args.kwargs["json"] == {
-        "msgtype": "markdown",
-        "markdown": {
+        "msgtype": "text",
+        "text": {
             "content": title
             + "\n"
             + body
-            + "\n\n[查看详情](https://grafana.example.com/)"
+            + "\n\n查看详情：https://grafana.example.com/"
         },
     }
 
 
 @pytest.mark.parametrize(
     "url",
-    ["javascript:alert(1)", "https://user:pass@host/", "https://host/\nunsafe", "bad"],
+    [
+        "javascript:alert(1)",
+        "https://user:pass@host/",
+        "https://host/\nunsafe",
+        "bad",
+    ],
 )
-def test_unsafe_report_link_not_sent(url):
+def test_unsafe_report_url_is_rejected_without_sending(url):
     client = make_client()
     assert not client.send_card_message("test", "title", "body", url=url)
     client.session.post.assert_not_called()
 
 
-def test_card_without_link_and_escaped_parenthesis():
+def test_plain_report_without_link():
     client = make_client()
     assert client.send_card_message("test", "title", "body")
     assert (
-        client.session.post.call_args.kwargs["json"]["markdown"]["content"]
-        == "title\nbody"
+        client.session.post.call_args.kwargs["json"]["text"]["content"] == "title\nbody"
     )
-    assert client.send_card_message("test", "title", "body", url="https://host/a(b)")
-    assert (
-        "[查看详情](https://host/a%28b%29)"
-        in client.session.post.call_args.kwargs["json"]["markdown"]["content"]
+
+
+@pytest.mark.parametrize("url", ["https://host/a(b)", "https://host/?a=1&b=2"])
+def test_plain_report_preserves_url_without_markdown_encoding(url):
+    client = make_client()
+    assert client.send_card_message("test", "title", "body", url=url)
+    assert client.session.post.call_args.kwargs["json"] == {
+        "msgtype": "text",
+        "text": {"content": "title\nbody\n\n查看详情：" + url},
+    }
+
+
+def test_long_plain_report_uses_text_byte_limit_and_preserves_all_content():
+    client = make_client()
+    title, body, url = "📊 总结", "统计数据\n" * 250, "https://grafana.example.com/"
+    assert client.send_card_message("daily_summary", title, body, url=url)
+    payloads = [call.kwargs["json"] for call in client.session.post.call_args_list]
+    assert len(payloads) > 1
+    assert all(payload["msgtype"] == "text" for payload in payloads)
+    chunks = [payload["text"]["content"] for payload in payloads]
+    assert all(
+        len(chunk.encode("utf-8")) <= WeChatClient.TEXT_LIMIT for chunk in chunks
     )
+    assert "".join(chunks) == title + "\n" + body + "\n\n查看详情：" + url
 
 
 def test_robot_minute_quota_counts_failures_and_expires(monkeypatch):
