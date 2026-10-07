@@ -1,3 +1,45 @@
+# Telegram 双渠道 5.0 验收记录
+
+测试日期：2026-10-07（Asia/Shanghai）。本次只增加 Telegram 及独立渠道开关，
+原 MQTT、统计查询、报告模板、数据库和其他 TeslaMate 服务保持原样。
+
+## 本机 Docker
+
+- AMD64 / ARM64 最终生产镜像派生的离线测试镜像分别通过 135 项回归。
+- 两种架构的最终生产镜像均通过真实 HTTP 回环验证：全部 16 条原模板同时发送到
+  企业微信与 Telegram 模拟端点，正文一致；失败、重定向、限流及 CLI 退出行为正确。
+- 两版 /app 的全部 12 个公开应用文件、11 个固定运行依赖及 Python 3.9.25 一致。
+  release/verified-app.sha256 已更新；运行依赖只新增 PySocks 1.7.1。
+- Telegram 连接测试发送成功；另发送 1 条测试说明及全部 16 条原模板样例，
+  每条都通过 HTTP 200、ok=true、实际 message_id 和匹配 Chat ID 校验。
+- 实际 Telegram 发送从本机 ARM64 5.0 生产镜像运行，使用指定机器人及 SOCKS5 代理。
+  Bot Token、数字收件人 ID、私有 YAML 不进入公开仓库或镜像。
+- 本次企业微信用真实 requests/HTTP 回环服务验证；没有向额外的真实群机器人试发。
+
+全部车辆、行程、温度、充电和服务状态为模拟数据，没有连接真实 PostgreSQL、
+MQTT 或车辆。接口确认表示消息已被 Telegram 接受，客户端展示由收件人查看。
+
+## 原逻辑与配置核对
+
+mqtt_listener.py、task_scheduler.py、database_manager.py 的内容与 4.1 完全一致。
+main.py 中启动/关闭通知的原调用及正文、样例生成函数也完全一致。
+公开 YAML 中数据库、MQTT、报告时间、温度阈值、日志和健康检查段落保持原样。
+服务器 Compose 只更新通知镜像版本，其他服务、端口、网络及卷完全一致。
+
+## 5.0 发布
+
+阿里云发布两个已测试平台，并提供统一 5.0 标签。GitHub 发布流程从该不可变摘要
+拉取同一批镜像，在原生 AMD64 / ARM64 再次验证全部源码摘要、依赖、135 项离线回归
+和真实 HTTP 回环，全部成功后原样同步全部架构至公开 Packages，不重建生产镜像。
+阿里云统一清单摘要：sha256:e018cb55b1d21abf957f23f2d764f2ea8175da9ecd4ae8236c390202a6fc4490。
+AMD64 镜像 ID：sha256:2959f45c9075d3cd45d25976cfc899ca70e9821e3c41a194e746970daa1e5079。
+ARM64 镜像 ID：sha256:dfed9846c24e05b7d5f57d7649c7adcc3ab30966ed276d142946e7dfc545860f。
+GitHub 流程链接在完成后补充。
+
+以下保留此前 4.0 / 4.1 的历史测试记录。
+
+---
+
 # Webhook 迁移验收记录
 
 首次验收日期：2026-10-01（Asia/Shanghai）。首次验收时未提交或上传；

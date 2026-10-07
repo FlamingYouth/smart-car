@@ -17,3 +17,7 @@ logs
 source-code
 tests
 CLAUDE.md
+
+# Local notification tests and private Telegram credentials
+.private/
+test-results/

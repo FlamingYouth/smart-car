@@ -20,6 +20,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # 导入自定义模块
 from wechat_client import WeChatClient
+from notification_client import (
+    NotificationClient, build_notification_client, channel_enabled,
+    notification_sections,
+)
 from mqtt_listener import TeslaMQTTListener
 from database_manager import TeslaMateDatabase
 from task_scheduler import TeslaTaskScheduler
@@ -37,7 +41,7 @@ class TeslaWeChatNotifier:
         self.config: Dict[str, Any] = {}
 
         # 核心组件
-        self.wechat_client: Optional[WeChatClient] = None
+        self.wechat_client: Optional[NotificationClient] = None
         self.database: Optional[TeslaMateDatabase] = None
         self.mqtt_listener: Optional[TeslaMQTTListener] = None
         self.task_scheduler: Optional[TeslaTaskScheduler] = None
@@ -91,7 +95,7 @@ class TeslaWeChatNotifier:
             logger.info(f"配置文件加载成功: {self.config_path}")
 
         except Exception as e:
-            logger.error(f"加载配置文件失败: {e}")
+            logger.error("加载配置文件失败: type=%s（配置详情已隐藏）", type(e).__name__)
             raise
 
     def _override_from_env(self):
@@ -192,14 +196,11 @@ class TeslaWeChatNotifier:
     def _init_components(self):
         """初始化各个组件"""
         try:
-            # 初始化企业微信客户端
-            wechat_config = self.config.get("wechat", {})
+            # 原组件仍调用同一通知接口；两个渠道各自发送和限流。
             notification_config = self.config.get("notifications", {})
-            self.wechat_client = WeChatClient(
-                webhook_url=wechat_config.get("webhook_url"),
-                message_configs=notification_config,
-            )
-            logger.info("企业微信客户端初始化完成")
+            self.wechat_client = build_notification_client(self.config)
+            logger.info("通知渠道初始化完成: %s",
+                        ", ".join(self.wechat_client.clients) or "全部关闭")
 
             # 初始化数据库连接
             db_config = self.config.get("database", {})
@@ -392,7 +393,8 @@ class TeslaWeChatNotifier:
             print(
                 f"🗄️ 数据库: {self.config['database']['host']}:{self.config['database']['port']}"
             )
-            print("📱 通知方式: 企业微信群机器人 Webhook")
+            channels = getattr(self.wechat_client, "clients", {})
+            print("📱 通知方式: " + (", ".join(channels) or "全部关闭"))
             print("=" * 60 + "\n")
 
         except Exception as e:
@@ -476,6 +478,8 @@ def main():
         "-c", "--config", default="config.yaml", help="配置文件路径 (默认: config.yaml)"
     )
     parser.add_argument("--test-wechat", action="store_true", help="测试企业微信连接")
+    parser.add_argument("--test-telegram", action="store_true", help="只测试 Telegram 通知")
+    parser.add_argument("--test-notifications", action="store_true", help="测试所有启用的通知渠道")
     parser.add_argument("--test-db", action="store_true", help="测试数据库连接")
     parser.add_argument("--test-mqtt", action="store_true", help="测试MQTT连接")
 
@@ -494,10 +498,10 @@ def main():
             with open(config_file, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
-            # 从环境变量覆盖企业微信配置
-            wechat_config = config.get("wechat", {})
-            webhook_url = os.getenv("WECHAT_WEBHOOK_URL", "").strip()
-            webhook_url = webhook_url or wechat_config.get("webhook_url")
+            wechat_config = notification_sections(config)["wechat"]
+            if not channel_enabled(wechat_config, "wechat", True):
+                raise ValueError("企业微信渠道已关闭，未发送测试")
+            webhook_url = wechat_config.get("webhook_url")
 
             # 创建企业微信客户端
             client = WeChatClient(
@@ -507,6 +511,26 @@ def main():
 
             result = client.send_message("test", "🧪 企业微信连接测试消息")
             print(f"测试结果: {'成功' if result else '失败'}")
+            if not result:
+                sys.exit(1)
+            return
+
+        if args.test_telegram or args.test_notifications:
+            # 只构造通知客户端，不连接 PostgreSQL、MQTT 或真实车辆。
+            with open(args.config, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+            client = build_notification_client(
+                config, only="telegram" if args.test_telegram else None
+            )
+            if not client.clients:
+                raise ValueError("请求测试的通知渠道已关闭，未发送测试")
+            content = (
+                "🧪 Telegram 连接测试消息" if args.test_telegram
+                else "🧪 Tesla 通知渠道连接测试消息"
+            )
+            result = client.send_message("test", content)
+            for name, success in client.last_results.items():
+                print(f"{name}: {'成功' if success else '失败'}")
             if not result:
                 sys.exit(1)
             return
@@ -614,7 +638,7 @@ def main():
         notifier.run()
 
     except Exception as e:
-        logger.error(f"程序异常退出: {e}")
+        logger.error("程序异常退出: type=%s（详情已隐藏）", type(e).__name__)
         sys.exit(1)
 
 

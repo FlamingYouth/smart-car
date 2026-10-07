@@ -1,4 +1,4 @@
-name: Verify and mirror tested container 4.1
+name: Verify and mirror tested container 5.0
 
 # Only an explicit manual run publishes; normal pushes do not publish images.
 "on":
@@ -8,14 +8,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-smart-car-container-4.1
+  group: publish-smart-car-container-5.0
   cancel-in-progress: false
 
 env:
   SOURCE_IMAGE: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier
-  SOURCE_DIGEST: sha256:03b2661a23de6aaa02447a1748202354cb51f5fafd6939f8db60c07156ad1c93
+  SOURCE_DIGEST: sha256:e018cb55b1d21abf957f23f2d764f2ea8175da9ecd4ae8236c390202a6fc4490
   DESTINATION_IMAGE: ghcr.io/flamingyouth/smart-car-tesla-notifier
-  VERSION: "4.1"
+  VERSION: "5.0"
 
 jobs:
   verify:
@@ -27,10 +27,10 @@ jobs:
         include:
           - architecture: amd64
             runner: ubuntu-24.04
-            image_id: sha256:4e0973723b5cc83f665cc79a9205f822a00b956aa87029714afc9428a83a1605
+            image_id: sha256:2959f45c9075d3cd45d25976cfc899ca70e9821e3c41a194e746970daa1e5079
           - architecture: arm64
             runner: ubuntu-24.04-arm
-            image_id: sha256:b5edfdba2cdb89bed585677862f4ad3efdb19f8a30453dd2b2088b586727edd0
+            image_id: sha256:dfed9846c24e05b7d5f57d7649c7adcc3ab30966ed276d142946e7dfc545860f
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
@@ -47,6 +47,8 @@ jobs:
           docker tag "$SOURCE_IMAGE@$SOURCE_DIGEST" "candidate:$ARCH"
           test "$(docker image inspect "candidate:$ARCH" --format '{{.Id}}')" = "$EXPECTED_ID"
           test "$(docker image inspect "candidate:$ARCH" --format '{{.Architecture}}')" = "$ARCH"
+          test "$(docker image inspect "candidate:$ARCH" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')" = "$VERSION"
+          test "$(docker image inspect "candidate:$ARCH" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" = https://github.com/FlamingYouth/smart-car
           docker run --rm --network none --read-only \
             --mount "type=bind,src=$PWD/release/verified-app.sha256,dst=/tmp/verified-app.sha256,readonly" \
             "candidate:$ARCH" sha256sum -c /tmp/verified-app.sha256
@@ -130,7 +132,7 @@ jobs:
             "https://api.github.com/users/FlamingYouth/packages/container/smart-car-tesla-notifier" \
             | jq -e '.repository.full_name == "FlamingYouth/smart-car" and .visibility == "public"'
           {
-            echo '## Verified 4.1 published'
+            echo '## Verified 5.0 published'
             echo "Image: $DESTINATION_IMAGE:$VERSION"
             echo "Digest: $SOURCE_DIGEST"
             echo 'AMD64 and ARM64 passed the full offline regression and HTTP checks.'

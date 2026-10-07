@@ -1,4 +1,4 @@
-# Docker 3.1.0 使用的完整依赖集合，避免重建时漂移。
+# Docker 5.0 使用的完整依赖集合；仅增加 Telegram SOCKS5 支持。
 APScheduler==3.11.3
 certifi==2026.7.22
 charset-normalizer==3.4.9
@@ -9,3 +9,4 @@ PyYAML==6.0.3
 requests==2.32.5
 tzlocal==5.3.1
 urllib3==2.6.3
+PySocks==1.7.1

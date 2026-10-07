@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""调用现有模板生成模拟消息；仅 --send 才访问群机器人，无车辆/DB/MQTT连接。"""
+"""调用现有模板生成模拟消息；仅 --send 才访问启用的通知渠道，无车辆/DB/MQTT连接。"""
 
 import argparse
 from datetime import datetime, timedelta
 import json
-import os
 from pathlib import Path
 import sys
 from threading import Event, Lock
@@ -18,7 +17,7 @@ from database_manager import ChargingSummary, DriveSummary  # noqa: E402
 from main import TeslaWeChatNotifier  # noqa: E402
 from mqtt_listener import CarState, TeslaMQTTListener  # noqa: E402
 from task_scheduler import TeslaTaskScheduler  # noqa: E402
-from wechat_client import WeChatClient  # noqa: E402
+from notification_client import build_notification_client  # noqa: E402
 
 
 class Capture:
@@ -217,6 +216,10 @@ def main():
     )
     parser.add_argument("-c", "--config", default="config.yaml")
     parser.add_argument("--only", help="只测试一个 case 或 message_type")
+    parser.add_argument(
+        "--channel", choices=("wechat", "telegram", "all"), default="all",
+        help="选择测试渠道，默认测试所有已启用渠道",
+    )
     args = parser.parse_args()
     try:
         with open(args.config, encoding="utf-8") as file:
@@ -243,12 +246,9 @@ def main():
                 )
             )
             return 0
-        webhook = os.getenv("WECHAT_WEBHOOK_URL", "").strip() or config.get(
-            "wechat", {}
-        ).get("webhook_url")
-        client = WeChatClient(
-            webhook,
-            {
+        client = build_notification_client(
+            config,
+            message_configs={
                 item["message_type"]: {
                     "enabled": True,
                     "rate_limit_seconds": 0,
@@ -256,7 +256,10 @@ def main():
                 }
                 for item in samples
             },
+            only=None if args.channel == "all" else args.channel,
         )
+        if not client.clients:
+            raise ValueError("请求测试的通知渠道已关闭，未发送样例")
         intro = (
             f"🧪 Tesla 通知模板测试：接下来发送 {len(samples)} 条模拟样例。\n"
             "所有车辆、行程、温度、充电和启停信息均为模拟数据；"
@@ -274,8 +277,13 @@ def main():
                 )
             else:
                 result = client.send_message(item["message_type"], item["content"])
+            details = ", ".join(
+                name + "=" + ("成功" if success else "失败")
+                for name, success in client.last_results.items()
+            )
             print(
-                f"[{index}/{len(samples)}] {item['case']}: {'成功' if result else '失败'}"
+                f"[{index}/{len(samples)}] {item['case']}: "
+                f"{'成功' if result else '失败'} ({details})"
             )
             if not result:
                 print("已停止后续发送，请检查机器人配置或网络；不会自动重试。")

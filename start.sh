@@ -36,8 +36,8 @@ if [ "$1" = "--test" ]; then
     echo "🧪 运行系统测试..."
     echo "================================"
     
-    echo "📱 测试企业微信连接..."
-    python main.py -c "$CONFIG_FILE" --test-wechat
+    echo "📱 测试所有启用的通知渠道..."
+    python main.py -c "$CONFIG_FILE" --test-notifications
     
     echo ""
     echo "📡 测试MQTT连接..."

@@ -1,8 +1,18 @@
-# Tesla微信通知配置文件
+# Tesla 通知配置文件
 
 # 企业微信配置
 wechat:
+  enabled: true        # true 开启，false 关闭；旧配置未填写时默认开启
   webhook_url: ""
+
+# Telegram 配置：与企业微信可以同时开启
+telegram:
+  enabled: false       # true 开启，false 关闭
+  bot_token: ""        # 私有配置中填写 BotFather 的 Token
+  chat_id: ""          # 私聊/群组的数字 ID；私聊先向机器人发送 /start
+  proxy: ""            # 留空直连；例如 socks5h://127.0.0.1:7897
+  # Docker 访问宿主机代理时，可用 socks5h://host.docker.internal:7897
+
 
 database:
   host: "localhost"

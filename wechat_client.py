@@ -39,6 +39,7 @@ MessageKey = Tuple[str, str]
 class WeChatClient:
     """保留按车辆限流、去重；群由 Webhook 决定，不指定应用收件人。"""
 
+    CHANNEL_NAME = "企业微信"
     TEXT_LIMIT = 2048
     MARKDOWN_LIMIT = 4096
     ROBOT_MINUTE_LIMIT = 18
@@ -53,6 +54,10 @@ class WeChatClient:
         self.session.trust_env = False
         # 底层 DEBUG 请求日志包含 key，不允许输出请求地址。
         logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+        self._init_message_state(message_configs)
+
+    def _init_message_state(self, message_configs=None):
+        """两个渠道各自维护原有冷却、去重和请求限额。"""
         self._message_history: Dict[MessageKey, datetime] = {}
         self._last_messages: Dict[MessageKey, str] = {}
         self._pending_messages: Set[MessageKey] = set()
@@ -211,39 +216,44 @@ class WeChatClient:
                     return False
                 for index, chunk in enumerate(chunks):
                     self._request_times.append(time.monotonic())
-                    response = self.session.post(
-                        self._webhook_url,
-                        json={"msgtype": msgtype, msgtype: {"content": chunk}},
-                        timeout=(5, 10),
-                        allow_redirects=False,
-                    )
-                    if response.status_code != 200:
-                        logger.error(
-                            "群通知失败: HTTP=%s, 已发送分段=%s",
-                            response.status_code,
-                            index,
-                        )
-                        return False
-                    result = response.json()
-                    code = result.get("errcode") if isinstance(result, dict) else None
-                    if type(code) is not int or code != 0:
-                        logger.error(
-                            "群通知失败: errcode=%s, 已发送分段=%s",
-                            code if type(code) is int else "无有效结果",
-                            index,
-                        )
+                    if not self._send_chunk(chunk, msgtype, index):
                         return False
                 success = True
                 logger.info(
-                    "群通知发送成功: 类型=%s, 分段=%s", message_type, len(chunks)
+                    "%s通知发送成功: 类型=%s, 分段=%s",
+                    self.CHANNEL_NAME, message_type, len(chunks)
                 )
                 return True
         except Exception as exc:
             # 不输出异常原文、响应正文或 URL，它们可能包含 Webhook 密钥。
-            logger.error("群通知异常: type=%s（未自动重试）", type(exc).__name__)
+            logger.error("%s通知异常: type=%s（未自动重试）",
+                         self.CHANNEL_NAME, type(exc).__name__)
             return False
         finally:
             self._finish_message(reservation, content, success)
+
+    def _send_chunk(self, chunk, msgtype, index):
+        response = self.session.post(
+            self._webhook_url,
+            json={"msgtype": msgtype, msgtype: {"content": chunk}},
+            timeout=(5, 10),
+            allow_redirects=False,
+        )
+        if response.status_code != 200:
+            logger.error(
+                "群通知失败: HTTP=%s, 已发送分段=%s",
+                response.status_code, index,
+            )
+            return False
+        result = response.json()
+        code = result.get("errcode") if isinstance(result, dict) else None
+        if type(code) is not int or code != 0:
+            logger.error(
+                "群通知失败: errcode=%s, 已发送分段=%s",
+                code if type(code) is int else "无有效结果", index,
+            )
+            return False
+        return True
 
     def send_message(
         self, message_type: str, content: str, dedup_key: Optional[str] = None

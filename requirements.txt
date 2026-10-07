@@ -6,3 +6,4 @@ psycopg2-binary>=2.9.0   # PostgreSQL数据库连接
 requests>=2.28.0         # HTTP请求库
 PyYAML>=6.0              # YAML配置文件解析
 APScheduler>=3.9.0       # 任务调度器
+PySocks>=1.7.1         # Telegram SOCKS5 代理支持

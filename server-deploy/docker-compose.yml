@@ -88,7 +88,7 @@ services:
 
   tesla-notifier:
     container_name: teslamate-wechat-notifier
-    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0
     restart: always
     volumes:
       - ./config-prod.yaml:/app/config.yaml:ro

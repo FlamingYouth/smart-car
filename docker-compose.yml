@@ -3,14 +3,19 @@ version: '3.8'
 services:
   tesla-notifier:
     build: .
-    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:4.1
+    image: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0
     container_name: tesla-wechat-notifier
     volumes:
       - ./config-prod.yaml:/app/config.yaml:ro
       - ./logs:/app/logs
     environment:
       # 企业微信配置 - 从环境变量读取（更安全）
+      - WECHAT_ENABLED=${WECHAT_ENABLED:-}
       - WECHAT_WEBHOOK_URL=${WECHAT_WEBHOOK_URL:-}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TELEGRAM_PROXY=${TELEGRAM_PROXY:-}
       
       # 数据库配置
       - DB_HOST=${DB_HOST}

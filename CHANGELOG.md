@@ -1,5 +1,27 @@
 # 版本记录
 
+## 5.0 — 2026-10-07
+
+- 新增 Telegram 通知，支持 Bot Token、数字 Chat ID 和可持久化的 HTTP/SOCKS5 代理。
+- YAML 增加 `wechat.enabled` 和 `telegram.enabled`，可分别开关或同时开启。
+- 原配置继续默认启用企业微信、关闭 Telegram；关闭的渠道不用填写凭据。
+- 两个渠道独立冷却、去重、限流；单个渠道发送失败仍会尝试另一个。
+- 保持全部车辆事件、数据库查询、报告模板和详情网址，原 16 条样例可同时发送到两渠道。
+- 新增只测试 Telegram / 已启用通知的 CLI；样例工具可按渠道选择。
+- 通知镜像升级至 `5.0`，TeslaMate、Grafana、数据库及 MQTT 镜像和配置保持原样。
+- 私有通知配置排除在 Git 和镜像之外；运行依赖仅增加固定版本 PySocks。
+
+镜像地址：
+
+```text
+registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0
+ghcr.io/flamingyouth/smart-car-tesla-notifier:5.0
+```
+
+从 4.1 升级时沿用现有私有配置，添加需要启用的 Telegram 字段即可。
+只更新 `tesla-notifier` 服务，不创建或清空数据库卷。具体配置见 README，
+测试与发布记录见 TEST_REPORT.md。
+
 ## 4.1 — 2026-10-01
 
 - 日报、周报、月报改为企业微信群机器人普通文本 `text`，与其他通知使用相同发送格式。
