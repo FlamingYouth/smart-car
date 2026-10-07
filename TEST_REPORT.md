@@ -34,7 +34,12 @@ main.py 中启动/关闭通知的原调用及正文、样例生成函数也完�
 阿里云统一清单摘要：sha256:e018cb55b1d21abf957f23f2d764f2ea8175da9ecd4ae8236c390202a6fc4490。
 AMD64 镜像 ID：sha256:2959f45c9075d3cd45d25976cfc899ca70e9821e3c41a194e746970daa1e5079。
 ARM64 镜像 ID：sha256:dfed9846c24e05b7d5f57d7649c7adcc3ab30966ed276d142946e7dfc545860f。
-GitHub 流程链接在完成后补充。
+发布验收日期：2026-10-08（Asia/Shanghai）。
+GitHub 原生 AMD64 / ARM64 各通过 135 项离线回归及全部双渠道 HTTP 回环检查，
+再原样同步阿里云镜像。两个仓库的清单、平台镜像、配置和层摘要完全相同；
+镜像包为公开可见，关联本仓库。已用无登录凭据的 Docker 配置分别拉取
+阿里云与 GitHub 的 AMD64、ARM64 5.0，四次镜像 ID 均与本机验收镜像一致。
+流程：[5.0 双架构复测与镜像同步](https://github.com/FlamingYouth/smart-car/actions/runs/37648253993)。
 
 以下保留此前 4.0 / 4.1 的历史测试记录。
 

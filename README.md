@@ -167,7 +167,7 @@ docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:5.0
 
 `5.0` 已在阿里云和公开 GitHub Packages 发布，并关联本仓库。
 AMD64、ARM64 的匿名反向拉取均已验证；两边镜像清单摘要完全相同。
-本地 Docker 与 GitHub 原生双架构分别执行完整回归，具体范围见 [测试报告](TEST_REPORT.md)。
+本地 Docker 与 GitHub 原生双架构各通过 135 项完整回归，具体范围见 [测试报告](TEST_REPORT.md)。
 
 Packages 发布流程从已测试的阿里云镜像摘要同步，不重新构建生产镜像。
 两个平台在 GitHub 上再次进行源码摘要、依赖检查、离线回归和 HTTP 测试；

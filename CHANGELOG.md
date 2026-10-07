@@ -1,6 +1,6 @@
 # 版本记录
 
-## 5.0 — 2026-10-07
+## 5.0 — 2026-10-08
 
 - 新增 Telegram 通知，支持 Bot Token、数字 Chat ID 和可持久化的 HTTP/SOCKS5 代理。
 - YAML 增加 `wechat.enabled` 和 `telegram.enabled`，可分别开关或同时开启。
