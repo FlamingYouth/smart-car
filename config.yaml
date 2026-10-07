@@ -10,8 +10,9 @@ telegram:
   enabled: false       # true 开启，false 关闭
   bot_token: ""        # 私有配置中填写 BotFather 的 Token
   chat_id: ""          # 私聊/群组的数字 ID；私聊先向机器人发送 /start
-  proxy: ""            # 留空直连；例如 socks5h://127.0.0.1:7897
-  # Docker 访问宿主机代理时，可用 socks5h://host.docker.internal:7897
+  proxy: "socks5h://host.docker.internal:7897"  # Docker 访问宿主机 SOCKS5 代理
+  # 代理在其他服务器时改为容器可访问的地址；无需代理时填 ""
+  # 直接运行 Python、代理在同一主机时可用 socks5h://127.0.0.1:7897
 
 
 database:

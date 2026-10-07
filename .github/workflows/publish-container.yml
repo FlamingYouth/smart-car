@@ -1,4 +1,4 @@
-name: Verify and mirror tested container 5.0
+name: Verify and mirror tested container 5.1
 
 # Only an explicit manual run publishes; normal pushes do not publish images.
 "on":
@@ -8,14 +8,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-smart-car-container-5.0
+  group: publish-smart-car-container-5.1
   cancel-in-progress: false
 
 env:
   SOURCE_IMAGE: registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier
-  SOURCE_DIGEST: sha256:e018cb55b1d21abf957f23f2d764f2ea8175da9ecd4ae8236c390202a6fc4490
+  SOURCE_DIGEST: sha256:94d1a46b1675f8680a357e0f8d0f0d1c783edd9c41c62e9bd21cacbfa1693e12
   DESTINATION_IMAGE: ghcr.io/flamingyouth/smart-car-tesla-notifier
-  VERSION: "5.0"
+  VERSION: "5.1"
 
 jobs:
   verify:
@@ -27,10 +27,10 @@ jobs:
         include:
           - architecture: amd64
             runner: ubuntu-24.04
-            image_id: sha256:2959f45c9075d3cd45d25976cfc899ca70e9821e3c41a194e746970daa1e5079
+            image_id: sha256:8d000138a547b822f2f436242b0a362d7a6fa6283de94b6f1df32410b397fb4a
           - architecture: arm64
             runner: ubuntu-24.04-arm
-            image_id: sha256:dfed9846c24e05b7d5f57d7649c7adcc3ab30966ed276d142946e7dfc545860f
+            image_id: sha256:eb9f7f67cdfe46482ad64a203cba58ff0e69b610e6bf19ef832cad022648ee2b
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
@@ -132,7 +132,7 @@ jobs:
             "https://api.github.com/users/FlamingYouth/packages/container/smart-car-tesla-notifier" \
             | jq -e '.repository.full_name == "FlamingYouth/smart-car" and .visibility == "public"'
           {
-            echo '## Verified 5.0 published'
+            echo '## Verified 5.1 published'
             echo "Image: $DESTINATION_IMAGE:$VERSION"
             echo "Digest: $SOURCE_DIGEST"
             echo 'AMD64 and ARM64 passed the full offline regression and HTTP checks.'

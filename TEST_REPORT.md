@@ -1,3 +1,36 @@
+# Telegram 代理配置 5.1 验收记录
+
+测试日期：2026-10-08（Asia/Shanghai）。本次将 SOCKS5 代理地址明确写入公开 YAML，
+两份 Compose 的通知服务增加宿主机地址映射，并升级镜像版本。
+所有 Python 应用代码、原车辆处理、数据库查询、统计模板及运行依赖与 5.0 一致。
+
+## 本机 Docker
+
+- 最终 AMD64 / ARM64 生产镜像派生的离线测试层分别通过 135 项回归。
+- 两个架构均通过真实 HTTP 回环：全部 16 条原通知模板同时进入两渠道，
+  企业微信与 Telegram 的失败、重定向、限流、CLI 退出及渠道隔离均通过。
+- 两版 /app 全部 12 个公开文件与 release/verified-app.sha256 一致，固定运行依赖一致。
+- 使用 ARM64 5.1 生产镜像、只读私有 YAML 和宿主机地址映射，
+  经 YAML 中的 SOCKS5 代理发送 1 条连接测试、1 条说明及全部 16 条 Telegram 样例。
+  每条均通过 HTTP 200、ok=true、实际 message_id 和匹配 Chat ID 校验。
+- Telegram 代理只作用于其自身；企业微信保留直连。私有 Token、Chat ID 和 YAML
+  不进入公开文件或镜像。企业微信使用隔离回环端点验证，没有向额外真实群发送。
+- config.yaml 除 Telegram 代理字段外的配置值与 5.0 相同。
+  Compose 除通知镜像版本和宿主机地址映射外的所有服务配置一致。
+- 全部测试使用模拟车辆及统计数据，没有访问真实 PostgreSQL、MQTT 或车辆。
+
+## 5.1 发布
+
+阿里云 AMD64 / ARM64 已发布，统一清单摘要：
+sha256:94d1a46b1675f8680a357e0f8d0f0d1c783edd9c41c62e9bd21cacbfa1693e12。
+AMD64 镜像 ID：sha256:8d000138a547b822f2f436242b0a362d7a6fa6283de94b6f1df32410b397fb4a。
+ARM64 镜像 ID：sha256:eb9f7f67cdfe46482ad64a203cba58ff0e69b610e6bf19ef832cad022648ee2b。
+GitHub 原生双架构复测、Packages 同步及匿名拉取待验收。
+
+以下保留 5.0 及更早版本的历史测试记录。
+
+---
+
 # Telegram 双渠道 5.0 验收记录
 
 测试日期：2026-10-07（Asia/Shanghai）。本次只增加 Telegram 及独立渠道开关，

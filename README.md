@@ -19,7 +19,8 @@
 5.0 在原企业微信通知基础上添加 Telegram，不改变车辆事件、统计查询、
 通知模板、日报时间、阈值或其他 TeslaMate 服务。发布前使用本机 Docker
 进行离线回归、真实 HTTP 回环检查，并向授权 Telegram 机器人逐条试发全部样例。
-当前通知镜像发布标签为 `5.0`；这不是 TeslaMate 等其他组件的升级版本号。
+5.1 将 SOCKS5 代理地址写进公开 YAML，并为 Docker 增加宿主机地址映射。
+当前通知镜像发布标签为 `5.1`；这不是 TeslaMate 等其他组件的升级版本号。
 具体测试范围见 [测试报告](TEST_REPORT.md)。
 
 GitHub 源码：[FlamingYouth/smart-car](https://github.com/FlamingYouth/smart-car)。
@@ -67,7 +68,7 @@ telegram:
   enabled: true
   bot_token: ""   # 在私有文件中填 BotFather 提供的 Token
   chat_id: ""     # 接收者的数字 Chat ID
-  proxy: ""       # 留空直连；支持 http/https/socks5/socks5h
+  proxy: "socks5h://host.docker.internal:7897" # 宿主机 SOCKS5 代理；无需代理填 ""
 
 database:
   host: "your-db-host"
@@ -99,11 +100,21 @@ scheduler:
 Telegram 保持原通知的普通文本、emoji 和详情网址，不启用 Markdown/HTML 解析。
 [Telegram Bot API](https://core.telegram.org/bots/api#sendmessage)
 
-代理只对 Telegram 生效，企业微信继续直连。服务器可按实际情况填写
-`socks5h://127.0.0.1:7897`；本机 Docker Desktop 访问宿主机代理时填写
-`socks5h://host.docker.internal:7897`。`127.0.0.1` 在容器内指容器本身。
+代理只对 Telegram 生效，企业微信继续直连。5.1 的公开 YAML 已填写
+`socks5h://host.docker.internal:7897`，用于 Docker 中访问宿主机 SOCKS5 代理。
+两份 Compose 的通知服务均已加入 `host.docker.internal:host-gateway` 映射，
+Linux Docker Engine 20.10+ 可使用同一地址；独立 `docker run` 需带下面示例的
+`--add-host`。Linux 上宿主机代理还需监听容器可访问的网卡地址，并允许容器网段连接。
+
+代理在其他机器时，把 YAML 改成容器能访问的实际代理地址及端口。
+直接运行 Python 且代理在同一主机时，可用 `socks5h://127.0.0.1:7897`；
+容器内的 `127.0.0.1` 指容器本身。无需代理时把 `telegram.proxy` 设为 `""`。
 `socks5h` 由代理解析域名，镜像已含 PySocks，无需另外安装。
 [Requests SOCKS 配置](https://requests.readthedocs.io/en/latest/user/advanced/#socks)
+
+**已有部署必须在原私有 `config-prod.yaml` 中添加或更新 `telegram.proxy`。**
+升级镜像不会覆盖挂载的 YAML；保留原 Token、Chat ID、数据库及 MQTT 配置。
+修改后重建通知容器即可生效，不需要更改其他服务。
 
 旧 `WECHAT_CORPID`、`WECHAT_CORPSECRET`、`WECHAT_AGENTID`、
 `WECHAT_TOUSER`、`WECHAT_PROXY` 不再使用，旧 `target_users` 不再决定收件人；
@@ -123,8 +134,9 @@ Webhook、Token、Chat ID 和容器可用的代理，再只读挂载：
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" \
+  --add-host host.docker.internal:host-gateway \
   -v "$PWD/config-prod.yaml:/app/config.yaml:ro" \
-  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0 \
+  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.1 \
   python main.py --test-notifications
 ```
 
@@ -136,8 +148,9 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" \
+  --add-host host.docker.internal:host-gateway \
   -v "$PWD/config-prod.yaml:/app/config.yaml:ro" \
-  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0 \
+  registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.1 \
   python scripts/send_notification_samples.py --send
 ```
 
@@ -153,34 +166,33 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 先完成上述试发，确认后再接入自己的数据库和 MQTT：
 
-`5.0` 的发布地址：
+`5.1` 的发布地址：
 
 ```text
-registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.0
+registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.1
 ```
 
 GitHub Packages 备用镜像地址：
 
 ```bash
-docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:5.0
+docker pull ghcr.io/flamingyouth/smart-car-tesla-notifier:5.1
 ```
 
-`5.0` 已在阿里云和公开 GitHub Packages 发布，并关联本仓库。
-AMD64、ARM64 的匿名反向拉取均已验证；两边镜像清单摘要完全相同。
-本地 Docker 与 GitHub 原生双架构各通过 135 项完整回归，具体范围见 [测试报告](TEST_REPORT.md)。
+`5.1` 提供阿里云与 GitHub Packages 两个镜像发布地址。
+本地 Docker 两种架构各通过 135 项完整回归，具体发布及远程验证结果见 [测试报告](TEST_REPORT.md)。
 
 Packages 发布流程从已测试的阿里云镜像摘要同步，不重新构建生产镜像。
 两个平台在 GitHub 上再次进行源码摘要、依赖检查、离线回归和 HTTP 测试；
 全部通过后才同步所有架构，并校验两个仓库的镜像清单摘要完全相同。
 发布使用仓库级临时授权，不需要把 Docker 密码或个人 Token 写进源码。
-需要自行发布时，在 GitHub Actions 中手动运行 `Verify and mirror tested container 5.0`；
+需要自行发布时，在 GitHub Actions 中手动运行 `Verify and mirror tested container 5.1`；
 普通源码提交不会自动发布镜像。新 Packages 默认私有，发布后需在包设置中改为公开，
 并确认源码仓库关联；首次发布的具体结果见 TEST_REPORT.md。
 
 同一标签支持 `linux/amd64` 和 `linux/arm64`，拉取时自动选择架构；
 两种镜像使用相同应用源码、锁定的运行依赖版本，并分别完成容器回归测试。
-旧 `4.0` / `4.1` 保留供回退，不覆盖旧标签。
-旧的本机测试别名对应历史版本；测试新版请使用 `5.0`。
+旧 `4.0` / `4.1` / `5.0` 保留供回退，不覆盖旧标签。
+旧的本机测试别名对应历史版本；测试新版请使用 `5.1`。
 
 服务器直接拉取镜像，无需重新构建。确保私有配置已设置，文件可被容器 UID 1000 读取：
 
@@ -191,12 +203,12 @@ docker compose logs -f tesla-notifier
 ```
 
 较旧环境使用 `docker-compose` 代替 `docker compose`。
-仓库根目录的 Compose 使用上述阿里云 `5.0` 镜像，只读挂载私有配置，
+仓库根目录的 Compose 使用上述阿里云 `5.1` 镜像，只读挂载私有配置，
 并检查核心服务启动后的健康标记。需要自己从源码构建时，另执行 `docker compose build`。
 不要在测试阶段运行正式 Compose 启动命令：它会接入已配置的真实服务。
 
 `server-deploy/docker-compose.yml` 是作者提供的完整 TeslaMate 部署配置，
-通知服务使用 `5.0`，其余服务、端口、卷与网络保持作者提供的配置。
+通知服务使用 `5.1` 并添加宿主机代理地址映射，其余服务、端口、卷与网络保持作者提供的配置。
 服务器专用私有 `server-deploy/config-prod.yaml` 与该 Compose 放在同一目录，
 数据库地址为 `database:5432`、MQTT 为 `mosquitto:1883`；不要混用根目录的本机连接配置。
 完整 Webhook 与数据库密码只能保存在自己的私有文件中，不能提交公开仓库。
@@ -267,13 +279,13 @@ PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python tests/run_offl
 在相同生产镜像基础上做 Docker 回归：
 
 ```bash
-docker build -t codex-smart-car-runtime:5.0 .
-docker build --build-arg BASE_IMAGE=codex-smart-car-runtime:5.0 \
-  -f tests/Dockerfile -t codex-smart-car-tests:5.0 .
+docker build -t codex-smart-car-runtime:5.1 .
+docker build --build-arg BASE_IMAGE=codex-smart-car-runtime:5.1 \
+  -f tests/Dockerfile -t codex-smart-car-tests:5.1 .
 docker run --rm --network none \
   -e PYTHONDONTWRITEBYTECODE=1 -e PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
   -v "$PWD/tests:/app/tests:ro" \
-  codex-smart-car-tests:5.0 python tests/run_offline.py
+  codex-smart-car-tests:5.1 python tests/run_offline.py
 ```
 
 测试覆盖：双渠道开关、同时发送与失败隔离、Telegram 代理及限速、

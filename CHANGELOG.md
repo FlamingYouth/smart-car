@@ -1,5 +1,23 @@
 # 版本记录
 
+## 5.1 — 2026-10-08
+
+- 公开 YAML 明确填写 `telegram.proxy: "socks5h://host.docker.internal:7897"`，将 Telegram 代理持久保存在配置文件。
+- 根目录及服务器 Compose 仅为通知服务添加宿主机地址映射，支持 Linux Docker 访问宿主机代理。
+- 更新已有私有配置、远程代理、直接 Python 运行及无需代理时的说明。
+- 通知镜像升级至 `5.1`；企业微信与 Telegram 仍可独立开关或同时开启，车辆逻辑及模板保持原样。
+- 旧版标签保留，不覆盖已有私有配置或车辆数据。
+
+镜像地址：
+
+```text
+registry.cn-hangzhou.aliyuncs.com/bigbey/smart-car-tesla-notifier:5.1
+ghcr.io/flamingyouth/smart-car-tesla-notifier:5.1
+```
+
+已有部署在原 `config-prod.yaml` 中设置 `telegram.proxy` 后更新通知容器。
+镜像升级不会修改挂载的私有 YAML。完整步骤见 README，测试结果见 TEST_REPORT.md。
+
 ## 5.0 — 2026-10-08
 
 - 新增 Telegram 通知，支持 Bot Token、数字 Chat ID 和可持久化的 HTTP/SOCKS5 代理。

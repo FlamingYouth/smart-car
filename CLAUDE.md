@@ -61,8 +61,9 @@ Dockerfile copies only Python runtime files, sanitized config.yaml, scripts and 
 The base image digest and complete runtime dependencies are fixed to the tested versions.
 Runtime user is UID 1000. Read-only production config mounts must be readable by that user.
 The original local test alias is codex-smart-car-webhook:3.1.0.
-Root Compose and server-deploy/docker-compose.yml use the Aliyun notifier image tag 5.0.
-Only the notifier image tag changes; do not upgrade unrelated TeslaMate services.
+Root Compose and server-deploy/docker-compose.yml use the Aliyun notifier image tag 5.1.
+The notifier includes host.docker.internal:host-gateway for its YAML SOCKS5 proxy.
+Only notifier-specific image/proxy settings change; do not upgrade unrelated TeslaMate services.
 NOMINATIM_PROXY there belongs to TeslaMate geocoding and is not the notification proxy.
 
 ## Scope

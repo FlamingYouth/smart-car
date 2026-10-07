@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=codex-smart-car-runtime:5.0
+ARG BASE_IMAGE=codex-smart-car-runtime:5.1
 FROM ${BASE_IMAGE}
 USER root
 RUN pip install --no-cache-dir pytest==8.4.1
