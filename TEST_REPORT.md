@@ -25,7 +25,12 @@
 sha256:94d1a46b1675f8680a357e0f8d0f0d1c783edd9c41c62e9bd21cacbfa1693e12。
 AMD64 镜像 ID：sha256:8d000138a547b822f2f436242b0a362d7a6fa6283de94b6f1df32410b397fb4a。
 ARM64 镜像 ID：sha256:eb9f7f67cdfe46482ad64a203cba58ff0e69b610e6bf19ef832cad022648ee2b。
-GitHub 原生双架构复测、Packages 同步及匿名拉取待验收。
+GitHub 原生 AMD64 / ARM64 各通过 135 项离线回归及全部双渠道 HTTP 回环检查。
+GitHub Packages 原样同步同一批镜像，清单、两个平台的镜像配置及层摘要与阿里云完全相同；
+镜像包公开，关联本仓库。使用临时空登录配置分别匿名拉取阿里云和 GitHub 的两个架构，
+四次实际 Docker 拉取均与本机已验收的镜像 ID 一致。
+流程：[5.1 双架构复测与镜像同步](https://github.com/FlamingYouth/smart-car/actions/runs/37652071100)。
+发布与拉取验收日期：2026-10-08（Asia/Shanghai）。
 
 以下保留 5.0 及更早版本的历史测试记录。
 
